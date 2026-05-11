@@ -1,17 +1,17 @@
 {
   "name": "develol-bot",
-  "version": "1.0.0",
-  "description": "Develol Discord Bot — Script panel manager",
+  "version": "2.0.0",
   "type": "module",
+  "private": true,
   "main": "src/bot.mjs",
   "scripts": {
     "start": "node src/bot.mjs",
     "register": "node src/register-commands.mjs"
   },
-  "dependencies": {
-    "discord.js": "^14.16.3"
-  },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "discord.js": "^14.18.0"
   }
 }

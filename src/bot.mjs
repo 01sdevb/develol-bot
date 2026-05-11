@@ -6,11 +6,13 @@ import {
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const OWNER_ID = process.env.DISCORD_OWNER_ID;
 const BASE_URL = (process.env.BASE_URL || "https://develol.com").replace(/\/$/, "");
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "";
 
 if (!TOKEN) throw new Error("DISCORD_BOT_TOKEN is required");
 if (!CLIENT_ID) throw new Error("DISCORD_CLIENT_ID is required");
+if (!OWNER_ID) throw new Error("DISCORD_OWNER_ID is required — set your Discord user ID");
 
 // ─── API Helpers ─────────────────────────────────────────────────────────────
 async function apiReq(method, path, body) {
@@ -42,12 +44,12 @@ const client = new Client({
 const commands = [
   new SlashCommandBuilder()
     .setName("genkey")
-    .setDescription("[Owner] Genera una API key")
+    .setDescription("[Owner] Genera una API key de acceso")
     .addBooleanOption(o => o.setName("permanent").setDescription("Key permanente (sin expirar)").setRequired(false))
     .toJSON(),
   new SlashCommandBuilder()
     .setName("checkkey")
-    .setDescription("Verifica si una API key es válida")
+    .setDescription("Verifica si una API key tiene formato válido")
     .addStringOption(o => o.setName("key").setDescription("La API key").setRequired(true))
     .toJSON(),
   new SlashCommandBuilder()
@@ -84,8 +86,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
 
-    // /genkey
+    // /genkey — owner only
     if (commandName === "genkey") {
+      if (interaction.user.id !== OWNER_ID) {
+        return interaction.reply({ content: "❌ Solo el owner puede usar este comando.", ephemeral: true });
+      }
       await interaction.deferReply({ ephemeral: true });
       const permanent = interaction.options.getBoolean("permanent") ?? false;
       try {
@@ -93,7 +98,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (data.status !== "ok") {
           return interaction.editReply(`❌ Error: ${data.error}`);
         }
-        const expiry = data.expiresAt ? `<t:${Math.floor(new Date(data.expiresAt).getTime()/1000)}:R>` : "**Nunca (permanente)**";
+        const expiry = data.expiresAt
+          ? `<t:${Math.floor(new Date(data.expiresAt).getTime() / 1000)}:R>`
+          : "**Nunca (permanente)**";
         await interaction.editReply({
           embeds: [{
             title: "🔑 API Key Generada",
@@ -117,9 +124,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferReply({ ephemeral: true });
       const key = interaction.options.getString("key");
       try {
-        // Try to use the key info via the config endpoint
-        const data = await apiReq("GET", "/config");
-        // We can't directly check a key without auth, so check format
         if (!key.startsWith("dvl_") || key.length < 40) {
           return interaction.editReply("❌ Formato de key inválido. Las keys empiezan con `dvl_`");
         }
@@ -127,7 +131,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           embeds: [{
             title: "🔍 Key verificada",
             color: 0x5865f2,
-            description: `La key \`${key.slice(0,16)}...\` tiene formato válido.\nPara verificar si está activa, intenta registrarte en [develol.com](https://develol.com).`,
+            description: `La key \`${key.slice(0, 16)}...\` tiene formato válido.\nPara verificar si está activa, intenta registrarte en [develol.com](https://develol.com).`,
             footer: { text: "develol.com" }
           }]
         });
@@ -145,15 +149,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
           embeds: [{
             title: "⚡ Develol Obfuscator",
             color: 0xdc2626,
-            description: "Sistema de obfuscación de scripts Lua para Roblox, estilo Luarmor.",
+            description: "Sistema de obfuscación de scripts Lua para Roblox.",
             fields: [
               { name: "💰 Precio", value: `$${config.price} USD / ${config.months} mes(es)`, inline: true },
               { name: "💳 PayPal", value: config.paypalEnabled ? "✅ Activo" : "❌ Inactivo", inline: true },
               { name: "🌐 Web", value: "[develol.com](https://develol.com)", inline: true },
               { name: "🔐 Seguridad", value: "• HWID Locking\n• Key verification\n• Rate limiting\n• Anti-tamper", inline: false },
-              { name: "📦 Sistema v1", value: "• GET /api/v1/loaders/:hash.lua\n• GET /api/v1/load?h=HASH&k=HWID", inline: false }
             ],
-            footer: { text: "develol.com — Luarmor-style protection" },
+            footer: { text: "develol.com" },
             timestamp: new Date().toISOString()
           }]
         });
@@ -162,8 +165,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     }
 
-    // /panel
+    // /panel — owner only
     if (commandName === "panel") {
+      if (interaction.user.id !== OWNER_ID) {
+        return interaction.reply({ content: "❌ Solo el owner puede usar este comando.", ephemeral: true });
+      }
       await interaction.deferReply({ ephemeral: true });
       const embed = new EmbedBuilder()
         .setTitle("⚡ Develol Obfuscator")
@@ -181,11 +187,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
           "• HWID Locking — solo tu PC puede ejecutarlo\n" +
           "• Cifrado XOR — payload nunca expuesto\n" +
           "• Anti-tamper — detecta modificaciones\n" +
-          "• Rate limiting — 20 req/min por HWID\n\n" +
+          "• Rate limiting — protección anti-abuse\n\n" +
           "*Hecho con Develol | [develol.com](https://develol.com)*"
         )
         .setColor(0xdc2626)
-        .setFooter({ text: "develol.com — Luarmor-style protection" })
+        .setFooter({ text: "develol.com" })
         .setTimestamp();
 
       const row = new ActionRowBuilder().addComponents(

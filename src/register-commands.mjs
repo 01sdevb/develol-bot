@@ -1,37 +1,34 @@
-import { REST, Routes, SlashCommandBuilder, ChannelType, PermissionFlagsBits } from "discord.js";
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 
-if (!TOKEN || !CLIENT_ID) throw new Error("DISCORD_BOT_TOKEN and DISCORD_CLIENT_ID are required");
+if (!TOKEN || !CLIENT_ID) {
+  console.error("DISCORD_BOT_TOKEN and DISCORD_CLIENT_ID are required");
+  process.exit(1);
+}
 
 const commands = [
   new SlashCommandBuilder()
-    .setName("setup")
-    .setDescription("Configura el panel de un script de Develol en un canal")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addStringOption(opt =>
-      opt.setName("loader_url").setDescription("URL del loader (https://develol.com/api/raw/...)").setRequired(true)
-    )
-    .addChannelOption(opt =>
-      opt.setName("channel").setDescription("Canal donde publicar el panel (por defecto: este canal)").setRequired(false)
-        .addChannelTypes(ChannelType.GuildText)
-    ),
-
+    .setName("genkey")
+    .setDescription("[Owner] Genera una API key")
+    .addBooleanOption(o => o.setName("permanent").setDescription("Key permanente (sin expirar)").setRequired(false))
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName("checkkey")
+    .setDescription("Verifica si una API key tiene formato válido")
+    .addStringOption(o => o.setName("key").setDescription("La API key a verificar").setRequired(true))
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName("info")
+    .setDescription("Muestra información del sistema Develol")
+    .toJSON(),
   new SlashCommandBuilder()
     .setName("panel")
-    .setDescription("Publica el panel de un script por ID")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addIntegerOption(opt =>
-      opt.setName("script_id").setDescription("ID del script").setRequired(true)
-    ),
-
-  new SlashCommandBuilder()
-    .setName("invite")
-    .setDescription("Obtén el link de invitación del bot"),
-].map(cmd => cmd.toJSON());
+    .setDescription("[Owner] Envía el panel de obfuscator a este canal")
+    .toJSON()
+];
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
-console.log("[Develol Bot] Registering slash commands...");
 const data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-console.log(`[Develol Bot] Registered ${data.length} commands successfully.`);
+console.log(`✅ ${data.length} comandos registrados globalmente.`);
